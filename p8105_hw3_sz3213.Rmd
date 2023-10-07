@@ -1,0 +1,88 @@
+---
+title: "p8105_hw3_sz3213"
+author: "Sitian Zhou"
+date: "2023-10-07"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+## Problem 1
+
+```{r}
+library(p8105.datasets)
+data("instacart")
+```
+
+
+There are 134 aisles, and the fresh vegetables aisle is the most items ordered from, with the .
+
+```{r}
+instacart |> 
+  group_by(aisle) |> 
+  summarize(n_obs = n()) |> 
+  filter(n_obs == max(n_obs))
+```
+
+
+```{r}
+instacart |> 
+  group_by(aisle_id) |> 
+  summarize(n_obs = n()) |> 
+  filter(n_obs > 10000) |> 
+  ggplot(aes(x = aisle_id, y = n_obs)) +
+  geom_point()
+```
+
+```{r}
+instacart |> 
+  filter(
+    aisle == "baking ingredients" |
+    aisle == "dog food care" | 
+    aisle == "packaged vegetables fruits") |> 
+  group_by(aisle, product_name) |> 
+  summarize(n_orders = n()) |> 
+  mutate(
+    n_order_rank = min_rank(desc(n_orders))
+  ) |> 
+  filter(n_order_rank <= 3) |> 
+  select(product_name, aisle, n_orders) |> 
+  knitr::kable()
+```
+
+
+```{r}
+instacart |> 
+  filter(
+    product_name == "Pink Lady Apples"|
+    product_name == "Coffee Ice Cream") |> 
+  group_by(product_name, order_dow) |> 
+  summarize(mean_hour = mean(order_hour_of_day)) |> 
+  pivot_wider(
+    names_from = product_name,
+    values_from = mean_hour) |> 
+  knitr::kable()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
