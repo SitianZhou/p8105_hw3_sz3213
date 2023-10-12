@@ -5,37 +5,53 @@ date: "2023-10-07"
 output: github_document
 ---
 
-```{r}
+```{r loading libraries}
 library(tidyverse)
+library(p8105.datasets)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
 ```
 
 
 ## Problem 1
 
-```{r}
-library(p8105.datasets)
+```{r loading dataset}
 data("instacart")
 ```
 
+The dataset `instacart` contains `r nrow(instacart)` observations on `n ncol(instacart)` variables. Each row represents a product from an instacart order. The variables contains information about products such as product id, name, and when was the product ordered. The variable `reordered` denotes that if the product has been ordered by the user in the past. The dataset further includes information about user id and order id. The variables also give information about the aisle (e.g. yogurt) and department (e.g. dairy eggs) of the product.
 
-There are 134 aisles, and the fresh vegetables aisle is the most items ordered from, with the .
+Based on the table, there are 134 aisles, and the fresh vegetables aisle is the most items ordered from.
 
 ```{r}
 instacart |> 
   group_by(aisle) |> 
   summarize(n_obs = n()) |> 
-  filter(n_obs == max(n_obs))
+  arrange(desc(n_obs))
 ```
 
+The plot below shows the number of items ordered in each aisle, arranged in an ascending order.
 
 ```{r}
 instacart |> 
-  group_by(aisle_id) |> 
+  group_by(aisle) |> 
   summarize(n_obs = n()) |> 
   filter(n_obs > 10000) |> 
-  ggplot(aes(x = aisle_id, y = n_obs)) +
-  geom_point()
+  mutate(aisle = fct_reorder(aisle, n_obs)) |> 
+  ggplot(aes(x = aisle, y = n_obs)) +
+  geom_point() +
+  labs(y = "count", title = "Number of items ordered in each aisle") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
 ```
+
+The table summarizes the three most popular items in the aisles `baking ingredients`, `dog food care`, and `packaged vegetables fruits`.
 
 ```{r}
 instacart |> 
@@ -44,15 +60,15 @@ instacart |>
     aisle == "dog food care" | 
     aisle == "packaged vegetables fruits") |> 
   group_by(aisle, product_name) |> 
-  summarize(n_orders = n()) |> 
+  summarize(n_order = n()) |> 
   mutate(
-    n_order_rank = min_rank(desc(n_orders))
-  ) |> 
+    n_order_rank = min_rank(desc(n_order))) |> 
+  arrange(desc(n_order)) |> 
   filter(n_order_rank <= 3) |> 
-  select(product_name, aisle, n_orders) |> 
   knitr::kable()
 ```
 
+The next table shows the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week. The 0-6 in `order_dow` variable represent the day of the week when the order was placed. The Pink Lady Apples were generally purchased earlier in the day compared to the Coffee Ice Cream.
 
 ```{r}
 instacart |> 
@@ -64,20 +80,164 @@ instacart |>
   pivot_wider(
     names_from = product_name,
     values_from = mean_hour) |> 
-  knitr::kable()
+  knitr::kable(digits = 2)
+
 ```
 
 
 
+## Problem 2
 
 
 
+```{r cleaning the data}
+data("brfss_smart2010")
+
+brfss <-
+  brfss_smart2010 |> 
+  janitor::clean_names() |> 
+  filter(topic == "Overall Health"&
+         (response == "Excellent" |
+           response == "Very good"|
+           response == "Good"|
+           response == "Fair" |
+           response == "Poor")) |> 
+  mutate(
+    response = 
+      factor(response, 
+             levels = c("Poor", "Fair", "Good", "Very good", "Excellent")))
+
+```
+
+The above codes load and clean the dataset `brfss_smart2010`. The cleaned dataset `brfss` contains `r nrow(brfss)` observations and `r ncol(brfss)` variables focused on the “Overall Health” topic with responses from "Poor" to "Excellent".
+
+
+A total of 6 states, CT, FL, MA, NC, NJ, and PA states, were observed at 7 or more locations in 2002. States CA, CO, FL, MA, MD, NC, NE, NJ, NY, OH, PA, SC, TX, and WA were observed at 7 or more location in 2010.
+
+```{r count states}
+brfss |> 
+  filter(year == 2002) |> 
+  group_by(locationabbr) |> 
+  summarize(
+    n_states = 
+      n_distinct(locationdesc)) |> 
+  filter(n_states >= 7)
+
+brfss |> 
+  filter(year == 2010) |> 
+  group_by(locationabbr) |> 
+  summarize(
+    n_states = 
+      n_distinct(locationdesc)) |> 
+  filter(n_states >= 7)
+```
+
+
+The "spaghetti" plot of the mean crude prevalence against year. Each line in the plot represents a state across years.
+
+```{r}
+brfss |> 
+  filter(response == "Excellent") |> 
+  group_by(locationabbr, year) |> 
+  mutate(
+    mean_data_value = mean(data_value)) |> 
+  select(year, locationabbr, mean_data_value) |> 
+  unique() |> 
+  ggplot(aes(x = year, y = mean_data_value, color = locationabbr)) +
+  geom_line() +
+  labs(y = "crude prevalence (%)", title = "Mean crude prevalence vs. year for each state") +
+  theme(legend.position = "bottom")
+```
+
+
+The boxplot represents the `data_value`, which is crude prevalence, for responses from "Poor" to "Excellent" in NY state in 2006 and 2010. In both years, the response "Poor" has the lowest crude prevalence, which means the least people responded "Poor" when evaluating their health conditions. Most people have chosen responses "Very good" or "Good". In 2010, there was a larger proportion of "Very good" responses than in 2006.
+
+```{r}
+brfss |> 
+  filter((year == 2006 | year == 2010) & locationabbr == "NY") |> 
+  ggplot(aes(x = response, y = data_value, color = response)) +
+  geom_boxplot() +
+  facet_grid(. ~ year) + 
+  labs(y = "crude prevalence (%)") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+
+## Problem 3
 
 
 
+```{r loading and cleaning datasets}
+accel <- 
+  read_csv("data/nhanes_accel.csv") |> 
+  janitor::clean_names()
+
+covar <- 
+  read_csv("data/nhanes_covar.csv", skip = 4) |> 
+  janitor::clean_names() |> 
+  filter(age >= 21) |> 
+  mutate(
+    sex = case_match(
+      sex,
+      1 ~ "male",
+      2 ~ "female"),
+    sex = factor(
+      sex, 
+      levels = c("male", "female"))) |> 
+  drop_na()
+
+nhanes_df <-
+  inner_join(covar, accel)
+```
+
+The dataset `nhanes_df` includes `r nrow(nhanes_df)` observations and `r ncol(nhanes_df)` variables of 1440 MIMS values and subject information such as sequence number, age, sex, bmi, and education level. 
+
+The table below contains the number of men and women in each education category (1, 2, and 3). For both females and males, most subjects have more than a high school education. Among the female participants, the smallest proportion held qualifications equivalent to a high school education, while among the male participants, the lowest percentage possessed education below the high school level.
+
+```{r}
+nhanes_df |> 
+  select(seqn, sex, age, education) |> 
+  group_by(sex, education) |> 
+  summarize(count = n()) |> 
+  pivot_wider(
+    names_from = sex,
+    values_from = count
+  ) |> 
+  knitr::kable()
+```
+
+The boxplot reveals the the age distributions for men and women in each education category. It is worth noting that both male and female subjects with education level above high school have the lowest median age compared to those in other education categories. Within the female group, those possessing a high school education have the highest median age, while in the male group, individuals with education levels below high school have the highest median age. In addtion, females with a high school education tend to be older than their male counterparts with similar educational backgrounds.
 
 
+```{r}
+nhanes_df |> 
+  select(seqn, sex, age, education) |> 
+  ggplot(aes(x = sex, y = age, color = sex)) +
+  geom_boxplot() +
+  facet_grid(. ~ education)
+  
+```
 
+
+The next plot compares the total MIMS value of men and women across three education levels. For participants with at least high school education level, males tend to have higher MIMS measures than females.
+
+
+```{r}
+nhanes_df |> 
+  rowwise() |> 
+  mutate(
+    accel_sum = 
+      sum(sum
+          (c_across
+            (min1:min1440)))) |> 
+  select(seqn, sex, age, education, accel_sum) |> 
+  ggplot(aes(x = age, y = accel_sum, color = sex)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  facet_grid(. ~ education) +
+  labs(y = "total MIMS value") +
+  theme(legend.position = "bottom")
+```
 
 
 
