@@ -5,17 +5,20 @@ date: "2023-10-07"
 output: github_document
 ---
 
-```{r loading libraries}
+Load libraries
+
+```{r loading libraries, message=FALSE}
 library(tidyverse)
 library(p8105.datasets)
 
-options(
-  ggplot2.continuous.colour = "viridis",
-  ggplot2.continuous.fill = "viridis"
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
 )
-
-scale_colour_discrete = scale_colour_viridis_d
-scale_fill_discrete = scale_fill_viridis_d
 ```
 
 
@@ -27,9 +30,9 @@ data("instacart")
 
 The dataset `instacart` contains `r nrow(instacart)` observations on `n ncol(instacart)` variables. Each row represents a product from an instacart order. The variables contains information about products such as product id, name, and when was the product ordered. The variable `reordered` denotes that if the product has been ordered by the user in the past. The dataset further includes information about user id and order id. The variables also give information about the aisle (e.g. yogurt) and department (e.g. dairy eggs) of the product.
 
-Based on the table, there are 134 aisles, and the fresh vegetables aisle is the most items ordered from.
+Based on the table below, there are 134 aisles, and the fresh vegetables aisle is the most items ordered from.
 
-```{r}
+```{r aisle summary, comment=NA}
 instacart |> 
   group_by(aisle) |> 
   summarize(n_obs = n()) |> 
@@ -38,7 +41,7 @@ instacart |>
 
 The plot below shows the number of items ordered in each aisle, arranged in an ascending order.
 
-```{r}
+```{r number of items ordered in each asile}
 instacart |> 
   group_by(aisle) |> 
   summarize(n_obs = n()) |> 
@@ -53,7 +56,7 @@ instacart |>
 
 The table summarizes the three most popular items in the aisles `baking ingredients`, `dog food care`, and `packaged vegetables fruits`.
 
-```{r}
+```{r summarize 3 most popular items in aisles}
 instacart |> 
   filter(
     aisle == "baking ingredients" |
@@ -70,7 +73,7 @@ instacart |>
 
 The next table shows the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week. The 0-6 in `order_dow` variable represent the day of the week when the order was placed. The Pink Lady Apples were generally purchased earlier in the day compared to the Coffee Ice Cream.
 
-```{r}
+```{r pink lady apples vs. coffee ice cream}
 instacart |> 
   filter(
     product_name == "Pink Lady Apples"|
@@ -88,7 +91,7 @@ instacart |>
 
 ## Problem 2
 
-
+Load and clean the dataset.
 
 ```{r cleaning the data}
 data("brfss_smart2010")
@@ -114,7 +117,7 @@ The above codes load and clean the dataset `brfss_smart2010`. The cleaned datase
 
 A total of 6 states, CT, FL, MA, NC, NJ, and PA states, were observed at 7 or more locations in 2002. States CA, CO, FL, MA, MD, NC, NE, NJ, NY, OH, PA, SC, TX, and WA were observed at 7 or more location in 2010.
 
-```{r count states}
+```{r count states, results='hide'}
 brfss |> 
   filter(year == 2002) |> 
   group_by(locationabbr) |> 
@@ -135,7 +138,7 @@ brfss |>
 
 The "spaghetti" plot of the mean crude prevalence against year. Each line in the plot represents a state across years.
 
-```{r}
+```{r the spaghetti plot}
 brfss |> 
   filter(response == "Excellent") |> 
   group_by(locationabbr, year) |> 
@@ -145,27 +148,29 @@ brfss |>
   unique() |> 
   ggplot(aes(x = year, y = mean_data_value, color = locationabbr)) +
   geom_line() +
-  labs(y = "crude prevalence (%)", title = "Mean crude prevalence vs. year for each state") +
+  labs(y = "crude prevalence (%)", 
+       title = "Mean crude prevalence vs. year for each state", 
+       color = "State") +
   theme(legend.position = "bottom")
 ```
 
 
 The boxplot represents the `data_value`, which is crude prevalence, for responses from "Poor" to "Excellent" in NY state in 2006 and 2010. In both years, the response "Poor" has the lowest crude prevalence, which means the least people responded "Poor" when evaluating their health conditions. Most people have chosen responses "Very good" or "Good". In 2010, there was a larger proportion of "Very good" responses than in 2006.
 
-```{r}
+```{r boxplot for data value vs responses}
 brfss |> 
   filter((year == 2006 | year == 2010) & locationabbr == "NY") |> 
   ggplot(aes(x = response, y = data_value, color = response)) +
   geom_boxplot() +
   facet_grid(. ~ year) + 
-  labs(y = "crude prevalence (%)") +
+  labs(y = "crude prevalence (%)", title = "Crude prevalence vs. responses in NY State") +
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
 
 ## Problem 3
 
-
+Load and clean the datasets.
 
 ```{r loading and cleaning datasets}
 accel <- 
@@ -194,7 +199,7 @@ The dataset `nhanes_df` includes `r nrow(nhanes_df)` observations and `r ncol(nh
 
 The table below contains the number of men and women in each education category (1, 2, and 3). For both females and males, most subjects have more than a high school education. Among the female participants, the smallest proportion held qualifications equivalent to a high school education, while among the male participants, the lowest percentage possessed education below the high school level.
 
-```{r}
+```{r count number of men and women by education category}
 nhanes_df |> 
   select(seqn, sex, age, education) |> 
   group_by(sex, education) |> 
@@ -206,23 +211,24 @@ nhanes_df |>
   knitr::kable()
 ```
 
-The boxplot reveals the the age distributions for men and women in each education category. It is worth noting that both male and female subjects with education level above high school have the lowest median age compared to those in other education categories. Within the female group, those possessing a high school education have the highest median age, while in the male group, individuals with education levels below high school have the highest median age. In addtion, females with a high school education tend to be older than their male counterparts with similar educational backgrounds.
+The boxplot reveals the the age distributions for men and women in each education category. It is worth noting that both male and female subjects with education level above high school have the lowest median age compared to those in other education categories. Within the female group, those possessing a high school education have the highest median age, while in the male group, individuals with education levels below high school have the highest median age. In addition, females with a high school education tend to be older than their male counterparts with similar educational backgrounds.
 
 
-```{r}
+```{r boxplot for age distribution}
 nhanes_df |> 
   select(seqn, sex, age, education) |> 
   ggplot(aes(x = sex, y = age, color = sex)) +
   geom_boxplot() +
+  labs(title = "Age distributions by education category for men and women") +
   facet_grid(. ~ education)
   
 ```
 
 
-The next plot compares the total MIMS value of men and women across three education levels. For participants with at least high school education level, males tend to have higher MIMS measures than females.
+The next plot compares the total MIMS value of men and women across three education levels. The total MIMS value for participants over 60 is generally lower than that for other participants. Furthermore, for participants with at least a high school education level, males tend to have higher MIMS measures than females.
 
 
-```{r}
+```{r total MIMS value vs. age}
 nhanes_df |> 
   rowwise() |> 
   mutate(
@@ -235,14 +241,35 @@ nhanes_df |>
   geom_point() +
   geom_smooth(se = FALSE) +
   facet_grid(. ~ education) +
-  labs(y = "total MIMS value") +
+  labs(y = "total MIMS value", title = "Total MIMS value vs. age") +
   theme(legend.position = "bottom")
 ```
 
 
 
+The plot below shows the mean MIMS values in 24-hour activity time courses for men and women with each education level. The activity was measured in a minute-base, from 1 to 1440. According to the plot, the mean MIMS value gradually decreased in the first 300 minutes (5 hours) and then increased in the next 250 minutes (~4 hours). In the next 6 hours, the MIMS activity of participants in education categories 1 and 2 dropped slowly while that for participants in education category 3 was relatively stable. Then the MIMS value drops for all groups in the last 5 hours. In addition, the mean MIMS value for females in education category 3 was slightly higher than their male counterparts.
 
 
+```{r 24 hour activity}
+nhanes_df |> 
+  pivot_longer(
+    min1:min1440,
+    names_to = "min",
+    values_to = "accel_value",
+    names_prefix = "min") |> 
+  group_by(min, sex, education) |> 
+  mutate(
+    mean_accel = mean(accel_value),
+    min = as.numeric(min)) |> 
+  select(sex, education, min, mean_accel) |> 
+  unique() |> 
+  ggplot(aes(x = min, y = mean_accel, color = sex)) +
+  geom_line() +
+  facet_grid(education ~ .) +
+  labs(y = "mean MIMS value", title = "Mean MIMS values in 24-hour activity time courses") +
+  theme(legend.position = "bottom")
 
+  
+```
 
 
