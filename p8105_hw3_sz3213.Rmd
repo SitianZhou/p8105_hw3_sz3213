@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
 data("instacart")
 ```
 
-The dataset `instacart` contains `r nrow(instacart)` observations on `n ncol(instacart)` variables. Each row represents a product from an instacart order. The variables contains information about products such as product id, name, and when was the product ordered. The variable `reordered` denotes that if the product has been ordered by the user in the past. The dataset further includes information about user id and order id. The variables also give information about the aisle (e.g. yogurt) and department (e.g. dairy eggs) of the product.
+The dataset `instacart` contains `r nrow(instacart)` observations on `r ncol(instacart)` variables. Each row represents a product from an instacart order. The variables contain information about products such as product id, name, and when the product was ordered. The variable `reordered` denotes that if the product has been ordered by the user in the past. The dataset further includes information about user id and order id. The variables also give information about the aisle (e.g. yogurt) and department (e.g. dairy eggs) of the product.
 
 Based on the table below, there are 134 aisles, and the fresh vegetables aisle is the most items ordered from.
 
@@ -117,14 +117,15 @@ The above codes load and clean the dataset `brfss_smart2010`. The cleaned datase
 
 A total of 6 states, CT, FL, MA, NC, NJ, and PA states, were observed at 7 or more locations in 2002. States CA, CO, FL, MA, MD, NC, NE, NJ, NY, OH, PA, SC, TX, and WA were observed at 7 or more location in 2010.
 
-```{r count states, results='hide'}
+```{r count states}
 brfss |> 
   filter(year == 2002) |> 
   group_by(locationabbr) |> 
   summarize(
     n_states = 
       n_distinct(locationdesc)) |> 
-  filter(n_states >= 7)
+  filter(n_states >= 7) |> 
+  knitr::kable()
 
 brfss |> 
   filter(year == 2010) |> 
@@ -132,7 +133,8 @@ brfss |>
   summarize(
     n_states = 
       n_distinct(locationdesc)) |> 
-  filter(n_states >= 7)
+  filter(n_states >= 7) |> 
+  knitr::kable()
 ```
 
 
@@ -149,7 +151,7 @@ brfss |>
   ggplot(aes(x = year, y = mean_data_value, color = locationabbr)) +
   geom_line() +
   labs(y = "crude prevalence (%)", 
-       title = "Mean crude prevalence vs. year for each state", 
+       title = "Mean crude prevalence across year for each state", 
        color = "State") +
   theme(legend.position = "bottom")
 ```
@@ -211,7 +213,7 @@ nhanes_df |>
   knitr::kable()
 ```
 
-The boxplot reveals the the age distributions for men and women in each education category. It is worth noting that both male and female subjects with education level above high school have the lowest median age compared to those in other education categories. Within the female group, those possessing a high school education have the highest median age, while in the male group, individuals with education levels below high school have the highest median age. In addition, females with a high school education tend to be older than their male counterparts with similar educational backgrounds.
+The boxplot illustrates the the age distributions for men and women in each education category. It is worth noting that both male and female subjects with education level above high school have the lowest median age compared to those in other education categories. Within the female group, those possessing a high school education have the highest median age, while in the male group, individuals with education levels below high school have the highest median age. In addition, females with a high school education tend to be older than their male counterparts with similar educational backgrounds.
 
 
 ```{r boxplot for age distribution}
