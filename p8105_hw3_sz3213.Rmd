@@ -99,16 +99,15 @@ data("brfss_smart2010")
 brfss <-
   brfss_smart2010 |> 
   janitor::clean_names() |> 
-  filter(topic == "Overall Health"&
-         (response == "Excellent" |
-           response == "Very good"|
-           response == "Good"|
-           response == "Fair" |
-           response == "Poor")) |> 
+  rename(state = locationabbr,
+         county = locationdesc) |> 
+  filter(topic == "Overall Health"& 
+           response %in% c("Excellent", "Very good", "Good", "Fair", "Poor"))|> 
   mutate(
     response = 
       factor(response, 
-             levels = c("Poor", "Fair", "Good", "Very good", "Excellent")))
+             levels = c("Poor", "Fair", "Good", "Very good", "Excellent")),
+    county = substring(county, 6))
 
 ```
 
@@ -120,39 +119,38 @@ A total of 6 states, CT, FL, MA, NC, NJ, and PA states, were observed at 7 or mo
 ```{r count states}
 brfss |> 
   filter(year == 2002) |> 
-  group_by(locationabbr) |> 
+  group_by(state) |> 
   summarize(
     n_states = 
-      n_distinct(locationdesc)) |> 
+      n_distinct(county)) |> 
   filter(n_states >= 7) |> 
   knitr::kable()
 
 brfss |> 
   filter(year == 2010) |> 
-  group_by(locationabbr) |> 
+  group_by(state) |> 
   summarize(
     n_states = 
-      n_distinct(locationdesc)) |> 
+      n_distinct(county)) |> 
   filter(n_states >= 7) |> 
   knitr::kable()
 ```
 
 
-The "spaghetti" plot of the mean crude prevalence against year. Each line in the plot represents a state across years.
+The "spaghetti" plot of the mean crude prevalence for the response "Excellent" against year. Each line in the plot represents a state across years. The plot shows that the data value (crude prevalence) is relatively stable from 2002 to 2010, with no significant increase or decrease.
 
 ```{r the spaghetti plot}
 brfss |> 
   filter(response == "Excellent") |> 
-  group_by(locationabbr, year) |> 
+  group_by(state, year) |> 
   mutate(
     mean_data_value = mean(data_value)) |> 
-  select(year, locationabbr, mean_data_value) |> 
+  select(year, state, mean_data_value) |> 
   unique() |> 
-  ggplot(aes(x = year, y = mean_data_value, color = locationabbr)) +
+  ggplot(aes(x = year, y = mean_data_value, color = state)) +
   geom_line() +
   labs(y = "crude prevalence (%)", 
-       title = "Mean crude prevalence across year for each state", 
-       color = "State") +
+       title = "Mean crude prevalence across year for each state") +
   theme(legend.position = "bottom")
 ```
 
@@ -161,7 +159,7 @@ The boxplot represents the `data_value`, which is crude prevalence, for response
 
 ```{r boxplot for data value vs responses}
 brfss |> 
-  filter((year == 2006 | year == 2010) & locationabbr == "NY") |> 
+  filter((year == 2006 | year == 2010) & state == "NY") |> 
   ggplot(aes(x = response, y = data_value, color = response)) +
   geom_boxplot() +
   facet_grid(. ~ year) + 
@@ -177,7 +175,15 @@ Load and clean the datasets.
 ```{r loading and cleaning datasets}
 accel <- 
   read_csv("data/nhanes_accel.csv") |> 
-  janitor::clean_names()
+  janitor::clean_names() |> 
+  pivot_longer(
+    min1:min1440,
+    names_to = "min",
+    values_to = "accel_value",
+    names_prefix = "min") |> 
+  mutate(
+    min = as.numeric(min)
+  )
 
 covar <- 
   read_csv("data/nhanes_covar.csv", skip = 4) |> 
@@ -197,19 +203,19 @@ nhanes_df <-
   inner_join(covar, accel)
 ```
 
-The dataset `nhanes_df` includes `r nrow(nhanes_df)` observations and `r ncol(nhanes_df)` variables of 1440 MIMS values and subject information such as sequence number, age, sex, bmi, and education level. 
+The cleaned dataset `nhanes_df` includes `r nrow(nhanes_df)` observations and `r ncol(nhanes_df)` variables. It holds MIMS values measured in minutes in a 24-hour course. The variables also store information such as sequence number, age, sex, BMI, and education level.
 
 The table below contains the number of men and women in each education category (1, 2, and 3). For both females and males, most subjects have more than a high school education. Among the female participants, the smallest proportion held qualifications equivalent to a high school education, while among the male participants, the lowest percentage possessed education below the high school level.
 
 ```{r count number of men and women by education category}
 nhanes_df |> 
   select(seqn, sex, age, education) |> 
+  unique() |> 
   group_by(sex, education) |> 
   summarize(count = n()) |> 
   pivot_wider(
     names_from = sex,
-    values_from = count
-  ) |> 
+    values_from = count) |> 
   knitr::kable()
 ```
 
@@ -219,11 +225,11 @@ The boxplot illustrates the the age distributions for men and women in each educ
 ```{r boxplot for age distribution}
 nhanes_df |> 
   select(seqn, sex, age, education) |> 
+  unique() |> 
   ggplot(aes(x = sex, y = age, color = sex)) +
   geom_boxplot() +
   labs(title = "Age distributions by education category for men and women") +
   facet_grid(. ~ education)
-  
 ```
 
 
@@ -232,13 +238,8 @@ The next plot compares the total MIMS value of men and women across three educat
 
 ```{r total MIMS value vs. age}
 nhanes_df |> 
-  rowwise() |> 
-  mutate(
-    accel_sum = 
-      sum(sum
-          (c_across
-            (min1:min1440)))) |> 
-  select(seqn, sex, age, education, accel_sum) |> 
+  group_by(seqn, sex, age, education) |> 
+  summarize(accel_sum = sum(accel_value)) |> 
   ggplot(aes(x = age, y = accel_sum, color = sex)) +
   geom_point() +
   geom_smooth(se = FALSE) +
@@ -254,11 +255,6 @@ The plot below shows the mean MIMS values in 24-hour activity time courses for m
 
 ```{r 24 hour activity}
 nhanes_df |> 
-  pivot_longer(
-    min1:min1440,
-    names_to = "min",
-    values_to = "accel_value",
-    names_prefix = "min") |> 
   group_by(min, sex, education) |> 
   mutate(
     mean_accel = mean(accel_value),
@@ -270,8 +266,6 @@ nhanes_df |>
   facet_grid(education ~ .) +
   labs(y = "mean MIMS value", title = "Mean MIMS values in 24-hour activity time courses") +
   theme(legend.position = "bottom")
-
-  
 ```
 
 
